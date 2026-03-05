@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Useless Info Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <h1>🤯 Random Useless Fact</h1>
+
+        <div class="card">
+            <p id="fact">Click the button to generate a useless fact!</p>
+            <span id="source"></span>
+        </div>
+
+        <button onclick="getFact()">Generate Fact</button>
+    </div>
+
+<script>
+function getFact() {
+    fetch('/get-fact')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("fact").innerText = data.fact;
+        document.getElementById("source").innerText = "Source: " + data.source;
+    });
+}
+</script>
+
+</body>
+</html>
