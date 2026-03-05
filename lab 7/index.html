@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Useless Fact App</title>
+</head>
+<body>
+
+<h2>Random Useless Fact</h2>
+<p id="fact">Click button</p>
+
+<button onclick="getFact()">Get Fact</button>
+
+<script>
+async function getFact() {
+    let response = await fetch("/fact");
+    let data = await response.json();
+    document.getElementById("fact").innerText = data.fact;
+}
+</script>
+
+</body>
+</html>
