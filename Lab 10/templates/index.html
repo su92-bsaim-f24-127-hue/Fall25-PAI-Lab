@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fitness & Diet Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h2>💪 Fitness & Diet Chatbot</h2>
+
+<div id="chatbox"></div>
+
+<input type="text" id="userInput" placeholder="Ask about fitness...">
+<button onclick="sendMessage()">Send</button>
+
+<script>
+function sendMessage() {
+    let msg = document.getElementById("userInput").value;
+
+    fetch("/get", {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: "msg=" + msg
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("chatbox").innerHTML += 
+            "<p><b>You:</b> " + msg + "</p>";
+        document.getElementById("chatbox").innerHTML += 
+            "<p><b>Bot:</b> " + data.reply + "</p>";
+    });
+
+    document.getElementById("userInput").value = "";
+}
+</script>
+
+</body>
+</html>
