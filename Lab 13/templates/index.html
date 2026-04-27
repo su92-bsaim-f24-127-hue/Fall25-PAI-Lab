@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Interview Prep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="noise-overlay"></div>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-bracket">[</span>
+      AI<span class="logo-accent">PREP</span>
+      <span class="logo-bracket">]</span>
+      <span class="logo-blink">_</span>
+    </div>
+    <nav class="header-nav">
+      <button class="nav-btn active" data-view="browse" onclick="switchView('browse')">Browse</button>
+      <button class="nav-btn" data-view="quiz" onclick="switchView('quiz')">Quiz Mode</button>
+      <button class="nav-btn" data-view="stats" onclick="switchView('stats')">Stats</button>
+    </nav>
+    <div class="header-meta">
+      <span class="q-count" id="headerCount">{{ total }} Questions</span>
+      <button class="upload-btn" onclick="document.getElementById('uploadModal').classList.add('open')">
+        ↑ Upload CSV
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="view-browse" class="view active">
+  <section class="filters-bar">
+    <div class="filter-group">
+      <label class="filter-label">TOPIC</label>
+      <select id="filterTopic" onchange="loadQuestions()">
+        <option value="all">All Topics</option>
+        {% for topic in topics %}
+        <option value="{{ topic }}">{{ topic }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">DIFFICULTY</label>
+      <select id="filterDifficulty" onchange="loadQuestions()">
+        <option value="all">All Levels</option>
+        {% for d in difficulties %}
+        <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group search-group">
+      <label class="filter-label">SEARCH</label>
+      <input type="text" id="searchInput" placeholder="Search questions..." oninput="debounceSearch()"/>
+    </div>
+    <div class="filter-actions">
+      <button class="action-btn" onclick="shuffleQuestions()">⇄ Shuffle</button>
+      <button class="action-btn secondary" onclick="resetFilters()">↺ Reset</button>
+    </div>
+  </section>
+
+  <div class="results-meta">
+    <span id="resultsCount" class="results-count"></span>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <span id="progressText" class="progress-text"></span>
+  </div>
+
+  <section class="questions-grid" id="questionsGrid">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading questions...</p>
+    </div>
+  </section>
+</main>
+
+<main id="view-quiz" class="view">
+  <div class="quiz-container">
+    <div class="quiz-controls">
+      <div class="filter-group">
+        <label class="filter-label">TOPIC</label>
+        <select id="quizTopic">
+          <option value="all">All Topics</option>
+          {% for topic in topics %}
+          <option value="{{ topic }}">{{ topic }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">DIFFICULTY</label>
+        <select id="quizDifficulty">
+          <option value="all">All Levels</option>
+          {% for d in difficulties %}
+          <option value="{{ d }}">{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="start-btn" onclick="startQuiz()">▶ Start Quiz</button>
+    </div>
+
+    <div class="quiz-card" id="quizCard" style="display:none">
+      <div class="quiz-card-header">
+        <div class="quiz-badges">
+          <span class="badge-topic" id="quizCardTopic"></span>
+          <span class="badge-diff" id="quizCardDiff"></span>
+        </div>
+        <span class="quiz-counter" id="quizCounter"></span>
+      </div>
+
+      <h2 class="quiz-question" id="quizQuestion"></h2>
+
+      <div class="quiz-actions">
+        <button class="hint-btn" onclick="getHint()" id="hintBtn">💡 Get Hint</button>
+      </div>
+      <div class="hint-box" id="hintBox" style="display:none"></div>
+
+      <div class="answer-section">
+        <label class="filter-label">YOUR ANSWER</label>
+        <textarea id="userAnswer" placeholder="Type your answer here... think out loud, the AI will evaluate your response." rows="5"></textarea>
+        <div class="answer-btns">
+          <button class="eval-btn" onclick="evaluateAnswer()">🤖 Evaluate with AI</button>
+          <button class="reveal-btn" onclick="revealAnswer()">👁 Reveal Answer</button>
+        </div>
+      </div>
+
+      <div class="reference-answer" id="referenceAnswer" style="display:none">
+        <div class="ref-label">REFERENCE ANSWER</div>
+        <p id="refAnswerText"></p>
+      </div>
+
+      <div class="eval-result" id="evalResult" style="display:none">
+        <div class="score-display">
+          <div class="score-ring" id="scoreRing">
+            <span class="score-num" id="scoreNum"></span>
+            <span class="score-denom">/10</span>
+          </div>
+          <div class="score-meta">
+            <div class="grade-badge" id="gradeBadge"></div>
+            <div class="score-label">AI Evaluation</div>
+          </div>
+        </div>
+        <div class="eval-sections">
+          <div class="eval-section strengths">
+            <div class="eval-sec-label">✓ Strengths</div>
+            <p id="evalStrengths"></p>
+          </div>
+          <div class="eval-section improvements">
+            <div class="eval-sec-label">↑ Improvements</div>
+            <p id="evalImprovements"></p>
+          </div>
+          <div class="eval-section tip">
+            <div class="eval-sec-label">★ Interview Tip</div>
+            <p id="evalTip"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz-nav">
+        <button class="nav-question-btn" onclick="nextQuestion()">Next Question →</button>
+        <button class="nav-question-btn secondary" onclick="startQuiz()">↺ New Random</button>
+      </div>
+    </div>
+
+    <div class="quiz-empty" id="quizEmpty">
+      <div class="empty-icon">⚡</div>
+      <p>Select filters and hit Start Quiz to begin your mock interview session.</p>
+    </div>
+  </div>
+</main>
+
+<main id="view-stats" class="view">
+  <div class="stats-container">
+    <h2 class="stats-title">Dataset Overview</h2>
+    <div class="stats-grid" id="statsGrid">
+      <div class="loading-state"><div class="spinner"></div><p>Loading...</p></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal" id="questionModal">
+  <div class="modal-backdrop" onclick="closeModal('questionModal')"></div>
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('questionModal')">✕</button>
+    <div class="modal-badges">
+      <span class="badge-topic" id="modalTopic"></span>
+      <span class="badge-diff" id="modalDiff"></span>
+    </div>
+    <h3 class="modal-question" id="modalQuestion"></h3>
+    <div class="modal-answer-wrap">
+      <button class="reveal-btn full" id="modalRevealBtn" onclick="toggleModalAnswer()">👁 Reveal Answer</button>
+      <div class="modal-answer" id="modalAnswer" style="display:none">
+        <div class="ref-label">ANSWER</div>
+        <p id="modalAnswerText"></p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="eval-btn" onclick="openQuizFromModal()">🤖 Practice This Question</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="uploadModal">
+  <div class="modal-backdrop" onclick="closeModal('uploadModal')"></div>
+  <div class="modal-box upload-modal-box">
+    <button class="modal-close" onclick="closeModal('uploadModal')">✕</button>
+    <h3 class="modal-title">Upload Your CSV</h3>
+    <p class="upload-info">CSV must have <code>question</code> and <code>answer</code> columns. Optional: <code>topic</code>, <code>difficulty</code>.</p>
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">📁</div>
+      <p>Drop your CSV file here or click to browse</p>
+      <input type="file" id="csvFileInput" accept=".csv" onchange="handleUpload(this)"/>
+    </div>
+    <div class="upload-status" id="uploadStatus"></div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
